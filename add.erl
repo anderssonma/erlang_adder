@@ -1,8 +1,10 @@
 %% @doc Erlang mini project.
 -module(add).
--export([start/3, start/4, split/2, padd/2]).
+-export([m/0, start/3, start/4, split/2, padd/2]).
 
 %Work?
+
+m() -> start(12345, 678, 10).
 
 split(L, N) when length(L) < N ->
     L;
@@ -26,7 +28,7 @@ sep(N, Acc) ->
     Next = N rem 10,
     io:format("N ~p~n", [N]),
     io:format("Next ~p~n", [Next]),
-    sep(trunc(N/10), [Next|Acc]).
+    sep(trunc(N / 10), [Next | Acc]).
 
 sep(N) -> sep(N, []).
 
@@ -34,58 +36,66 @@ sep(N) -> sep(N, []).
 padd(A, B) when length(A) =:= length(B) ->
     {A, B};
 padd(A, B) when length(A) >= length(B) ->
-    padd(A, [0|B]);
+    padd(A, [0 | B]);
 padd(A, B) ->
-    padd([0|A], B).
+    padd([0 | A], B).
 
 %% divisible(M, N) when M / N =:= 0 ->
 %%     M / N;
 %% divisible(M, N) ->
 %%     N + 1.
 worker([H | []], Ppid) -> 
-    {Cout,Sum} = calc(H,Ppid,0),
-    Ppid ! {sum,Sum},
+    {Cout, Sum} = calc(H, 0, 0),
+    Ppid ! {sum, Sum rem 10},
     exit(Cout);
 
-worker([Head | Pairs],Ppid) ->
+worker([Head | Pairs], Ppid) ->
     
-    {Cout0,Sum0}= calc(Head,Ppid,0),
-    {Cout1,Sum1} = calc(Head,Ppid,1),
+    {Cout0, Sum0} = calc(Head, 0, 0),
+    {Cout1, Sum1} = calc(Head, 1, 0),
     
     process_flag(trap_exit,true),
     spawn_link(fun() -> worker(Pairs, Ppid) end),
 
     receive 
         {'EXIT', _PID, no_carry} ->
-            Ppid ! {sum,Sum0},
+            Ppid ! {sum, Sum0 rem 10},
             exit(Cout0);
         {'EXIT', _PID, carry} ->
-            Ppid ! {sum,Sum1},
+            Ppid ! {sum, Sum1 rem 10},
             exit(Cout1)
     end.
 
 
 
 calc([], Cout,Sum) -> 
-    io:format("Sum ~p~n", [Cout]),
+    %io:format("Sum ~p~n", [Cout]),
     
     case Cout =:= 1 of 
         true ->
-            {carry,Sum};
+            {carry, Sum};
         false ->
-            {no_carry,Sum}
+            {no_carry, Sum}
     end;
     
-calc([{A,B} | T], Cin,Sum) -> 
-    Tot = A+B+Cin,
+calc([{A, B} | T], Cin,Sum) ->
+
+    Tot = A + B + Cin,
     case Tot >= 10 of
         true ->
-            calc(T,1,Tot+Sum);
+            calc(T, 1, Tot + Sum);
         false ->
-            calc(T,0,Tot+Sum)
+            calc(T, 0, Tot + Sum)
     end.
     
     
+loop(0) -> exit(normal);
+loop(N) ->
+    receive
+        {sum, Sum}->
+            io:format("FINISHED WITH SUM: ~p~n", [Sum]),
+            loop(N - 1)
+    end.
 
 
 %% @doc TODO: add documentation
@@ -95,18 +105,17 @@ calc([{A,B} | T], Cin,Sum) ->
       Base::integer().
 
 start(ArgA, ArgB, _Base) ->
-    process_flag(trap_exit,true),
+
     {A, B} = padd(sep(ArgA), sep(ArgB)),
-    PairsRev = split(lists:zip(A, B), 1),
+    PairsRev = lists:reverse(split(lists:zip(A, B), 1)),
     Pairs = lists:map(fun lists:reverse/1, PairsRev),
-    Ppid = self(),
-    spawn_link(fun() -> worker(Pairs, Ppid) end),
-    %%io:format("C ~p~n", [Pairs]).
     
-    receive
-        {sum,Sum}->
-            io:format("Sum ~p~n", [Sum])
-    end.
+    Ppid = self(),
+    process_flag(trap_exit,true),
+    spawn_link(fun() -> worker(Pairs, Ppid) end),
+
+    io:format("PAIRS ~p~n", [PairsRev]),    
+    loop(length(A)).
 
 
 %% @doc TODO: add documentation
