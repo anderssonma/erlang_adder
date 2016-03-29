@@ -42,9 +42,50 @@ padd(A, B) ->
 %%     M / N;
 %% divisible(M, N) ->
 %%     N + 1.
+worker([H | []], Ppid) -> 
+    {Cout,Sum} = calc(H,Ppid,0),
+    Ppid ! {sum,Sum},
+    exit(Cout);
+
+worker([Head | Pairs],Ppid) ->
+    
+    {Cout0,Sum0}= calc(Head,Ppid,0),
+    {Cout1,Sum1} = calc(Head,Ppid,1),
+    
+    process_flag(trap_exit,true),
+    spawn_link(fun() -> worker(Pairs, Ppid) end),
+
+    receive 
+        {'EXIT', _PID, no_carry} ->
+            Ppid ! {sum,Sum0},
+            exit(Cout0);
+        {'EXIT', _PID, carry} ->
+            Ppid ! {sum,Sum1},
+            exit(Cout1)
+    end.
 
 
 
+calc([], Cout,Sum) -> 
+    io:format("Sum ~p~n", [Cout]),
+    
+    case Cout =:= 1 of 
+        true ->
+            {carry,Sum};
+        false ->
+            {no_carry,Sum}
+    end;
+    
+calc([{A,B} | T], Cin,Sum) -> 
+    Tot = A+B+Cin,
+    case Tot >= 10 of
+        true ->
+            calc(T,1,Tot+Sum);
+        false ->
+            calc(T,0,Tot+Sum)
+    end.
+    
+    
 
 
 %% @doc TODO: add documentation
@@ -54,13 +95,19 @@ padd(A, B) ->
       Base::integer().
 
 start(ArgA, ArgB, _Base) ->
-    
+    process_flag(trap_exit,true),
     {A, B} = padd(sep(ArgA), sep(ArgB)),
     PairsRev = split(lists:zip(A, B), 1),
     Pairs = lists:map(fun lists:reverse/1, PairsRev),
+    Ppid = self(),
+    spawn_link(fun() -> worker(Pairs, Ppid) end),
+    %%io:format("C ~p~n", [Pairs]).
     
-    io:format("C ~p~n", [Pairs]).
-    
+    receive
+        {sum,Sum}->
+            io:format("Sum ~p~n", [Sum])
+    end.
+
 
 %% @doc TODO: add documentation
 -spec start(A,B,Base, Options) -> ok when 
