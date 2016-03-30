@@ -88,28 +88,12 @@ calc([{A, B} | T], Cin,Sum) ->
             calc(T, 0, Tot + Sum)
     end.
 
-%% Get correcgt start divider
-divider(Sum,0)-> Sum;
-divider(Sum,Count)->
-    divider(Sum*10,Count-1).
 
-%% Concat sorted list into correct sum
-concat(List) ->
-    Divider = divider(1,length(List)-1),
-    io:format("Divider size : ~p~n", [Divider]),
-    concat(List,Divider,0).
- 
-concat([], _Divider, Sum) ->
-    Sum;
-    
-concat([H | List], Divider, Sum) ->
-    concat(List,trunc(Divider/10), Sum + H*Divider).
-
-%% Sort the received sums in correct order
+%% Sort the received sums in correct order and return correct total sum
 sort(Map,List,0) -> 
-    NewList = [maps:get(0, Map) | List],
-    io:format("Sort : ~p~n", [NewList]),
-    NewList;
+    {Result , Rest} = string:to_integer(lists:concat([maps:get(0, Map) | List])),
+    Result;
+
 sort(Map,List,Pos) ->
     sort(Map,[maps:get(Pos, Map) | List],Pos-1).
     
@@ -117,11 +101,8 @@ sort(Map,List,Pos) ->
 loop(0, List) -> 
     io:format("loop Innan Map : ~p~n", [List]),
     Map = maps:from_list(List),
-    %%io:format("loop Map : ~p~n", [Map]),
     Sorted = sort(Map, [], maps:size(Map)-1),
     io:format("Sorted : ~p~n", [Sorted]),
-    Voila = concat(Sorted),
-    io:format("Voila: ~p~n", [Voila]),
     exit(normal);
 
 loop(N, List) ->
