@@ -4,7 +4,7 @@
 
 %Work?
 
-m() -> start(123456789123456789, 345678912345678912, 20).
+m() -> start(123456789123456789, 345678912345648912, 20).
 
 split(L, N) when length(L) < N ->
     L;
@@ -48,10 +48,10 @@ padd(A, B) ->
 
 
 worker([H | []], Ppid, Count) -> 
-    {Cout, Sum} = calc(H, 0, 0),
+    {Cout, Sum} = calc(H, 0, []),
     %%io:format("Worker slut i listan: ~p ~n", [H]),
     %%io:format("Count: ~p Sum: ~p ~n", [Count], [Sum]),
-    Ppid ! {sum, Sum rem 10, Count},
+    Ppid ! {sum, Sum , Count},
     %%io:format("Count: ~p ~n", [Count]),
     exit(Cout);
 
@@ -60,16 +60,16 @@ worker([Head | Pairs], Ppid, Count) ->
     process_flag(trap_exit,true),
     spawn_link(fun() -> worker(Pairs, Ppid,Count+1) end),
 
-    {Cout0, Sum0} = calc(Head, 0, 0),
-    {Cout1, Sum1} = calc(Head, 1, 0),
+    {Cout0, Sum0} = calc(Head, 0, []),
+    {Cout1, Sum1} = calc(Head, 1, []),
     %%io:format("Count: ~p ~n", [Head]),
     receive 
         {'EXIT', _PID, no_carry} ->
-            Ppid ! {sum, Sum0 rem 10, Count},
+            Ppid ! {sum, Sum0 , Count},
             %%io:format("Count: ~p ~n", [Count]),
             exit(Cout0);
         {'EXIT', _PID, carry} ->
-            Ppid ! {sum, Sum1 rem 10, Count},
+            Ppid ! {sum, Sum1 , Count},
             %%io:format("Count: ~p ~n", [Count]),
             exit(Cout1)
     end.
@@ -90,25 +90,27 @@ calc([{A, B} | T], Cin,Sum) ->
     %%io:format("B: ~p ~n", [B]),
     case Tot >= 10 of
         true ->
-            calc(T, 1, Tot + Sum);
+            calc(T, 1, [Tot rem 10 | Sum]);
         false ->
-            calc(T, 0, Tot + Sum)
+            calc(T, 0, [Tot rem 10 | Sum])
     end.
 
 
 %% Sort the received sums in correct order and return correct total sum
 sort(Map,List,0) -> 
-    SortedList = lists:concat([maps:get(0, Map) | List]),
+    SortedList = lists:concat(maps:get(0, Map) ++ List),
+    %%io:format("sorted List : ~p~n", [SortedList]),
     {Result , _} = string:to_integer(SortedList),
     Result;
 
 sort(Map,List,Pos) ->
-    sort(Map,[maps:get(Pos, Map) | List],Pos-1).
+    sort(Map,maps:get(Pos, Map) ++ List,Pos-1).
     
     
 loop(0, List) -> 
     %%io:format("loop Innan Map : ~p~n", [List]),
     Map = maps:from_list(List),
+    %%io:format(" Map : ~p~n", [Map]),
     Sorted = sort(Map, [], maps:size(Map)-1),
     io:format("Correct result : ~p~n", [Sorted]),
     exit(normal);
