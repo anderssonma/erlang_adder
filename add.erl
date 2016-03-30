@@ -4,7 +4,7 @@
 
 %Work?
 
-m() -> start(12345, 6789, 10).
+m() -> start(123456789123456789, 345678912345678912, 20).
 
 split(L, N) when length(L) < N ->
     L;
@@ -22,17 +22,17 @@ split(L, N, Lists) ->
 	    [L2, L1|Lists]
     end.
 
-
+%% Seperate each individual number into an element in a list
 sep(0, Acc) -> Acc;
 sep(N, Acc) ->
     Next = N rem 10,
-    %%io:format("N ~p~n", [N]),
+    %%io:format("Kvar  N ~p~n", [N]),
     %%io:format("Next ~p~n", [Next]),
-    sep(trunc(N / 10), [Next | Acc]).
+    sep(trunc(N div 10), [Next | Acc]).
 
 sep(N) -> sep(N, []).
 
-
+%% Insert padding in the list if not of equal length
 padd(A, B) when length(A) =:= length(B) ->
     {A, B};
 padd(A, B) when length(A) >= length(B) ->
@@ -46,26 +46,31 @@ padd(A, B) ->
 %%     N + 1.
 
 
+
 worker([H | []], Ppid, Count) -> 
     {Cout, Sum} = calc(H, 0, 0),
-    
+    %%io:format("Worker slut i listan: ~p ~n", [H]),
+    %%io:format("Count: ~p Sum: ~p ~n", [Count], [Sum]),
     Ppid ! {sum, Sum rem 10, Count},
+    %%io:format("Count: ~p ~n", [Count]),
     exit(Cout);
 
 worker([Head | Pairs], Ppid, Count) ->
-    
-    {Cout0, Sum0} = calc(Head, 0, 0),
-    {Cout1, Sum1} = calc(Head, 1, 0),
-    
+        
     process_flag(trap_exit,true),
     spawn_link(fun() -> worker(Pairs, Ppid,Count+1) end),
 
+    {Cout0, Sum0} = calc(Head, 0, 0),
+    {Cout1, Sum1} = calc(Head, 1, 0),
+    %%io:format("Count: ~p ~n", [Head]),
     receive 
         {'EXIT', _PID, no_carry} ->
             Ppid ! {sum, Sum0 rem 10, Count},
+            %%io:format("Count: ~p ~n", [Count]),
             exit(Cout0);
         {'EXIT', _PID, carry} ->
             Ppid ! {sum, Sum1 rem 10, Count},
+            %%io:format("Count: ~p ~n", [Count]),
             exit(Cout1)
     end.
 
@@ -81,6 +86,8 @@ calc([], Cout,Sum) ->
     
 calc([{A, B} | T], Cin,Sum) ->
     Tot = A + B + Cin,
+    %%io:format("A: ~p ~n", [A]),
+    %%io:format("B: ~p ~n", [B]),
     case Tot >= 10 of
         true ->
             calc(T, 1, Tot + Sum);
@@ -91,7 +98,8 @@ calc([{A, B} | T], Cin,Sum) ->
 
 %% Sort the received sums in correct order and return correct total sum
 sort(Map,List,0) -> 
-    {Result , Rest} = string:to_integer(lists:concat([maps:get(0, Map) | List])),
+    SortedList = lists:concat([maps:get(0, Map) | List]),
+    {Result , _} = string:to_integer(SortedList),
     Result;
 
 sort(Map,List,Pos) ->
@@ -99,16 +107,16 @@ sort(Map,List,Pos) ->
     
     
 loop(0, List) -> 
-    io:format("loop Innan Map : ~p~n", [List]),
+    %%io:format("loop Innan Map : ~p~n", [List]),
     Map = maps:from_list(List),
     Sorted = sort(Map, [], maps:size(Map)-1),
-    io:format("Sorted : ~p~n", [Sorted]),
+    io:format("Correct result : ~p~n", [Sorted]),
     exit(normal);
 
 loop(N, List) ->
     receive
         {sum, Sum, Pos}->
-            io:format("FINISHED WITH SUM: ~p~n", [Sum]),
+            %%io:format("Received in loop: ~p~n", [Pos]),
             loop(N - 1, [{Pos,Sum} | List])
     end.
 
@@ -120,17 +128,19 @@ loop(N, List) ->
       Base::integer().
 
 start(ArgA, ArgB, _Base) ->
-
-    {A, B} = padd(sep(ArgA), sep(ArgB)),
-    PairsRev = lists:reverse(split(lists:zip(A, B), 1)),
-    Pairs = lists:map(fun lists:reverse/1, PairsRev),
     
+    {A, B} = padd(sep(ArgA),sep(ArgB)),
+    
+    PairsRev = lists:reverse(split(lists:zip(A, B), 1)),
+    %%io:format("PairsRev: ~p~n", [PairsRev]),
+    Pairs = lists:map(fun lists:reverse/1, PairsRev),
+    %%io:format("PAirs: ~p~n", [Pairs]),
     Ppid = self(),
     process_flag(trap_exit,true),
     spawn_link(fun() -> worker(Pairs, Ppid, 0) end),
 
-    io:format("PAIRS ~p~n", [PairsRev]),    
-    loop(length(A), []).
+    %%io:format("PAIRS ~p~n", [PairsRev]),    
+    loop(length(A) , []).
 
 
 %% @doc TODO: add documentation
