@@ -12,3 +12,4 @@ rel/example_project
 *
 !.gitignore
 !add.erl
+!utils.erl
