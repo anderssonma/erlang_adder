@@ -119,7 +119,7 @@ split(L, N) ->
     R = Len rem N,
     split(lists:reverse(L),[],Q,R).
 
-split([],NewList,Q,R) -> NewList;
+split([],NewList,_Q,_R) -> NewList;
     
 split(L,NewList,Q,R) when R > 0 ->
     {A,B} = lists:split(Q+1,L),

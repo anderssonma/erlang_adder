@@ -1,10 +1,13 @@
 %% @doc Erlang mini project.
 -module(add).
--export([m/0, start/3, start/4, split/2, padd/2]).
+-export([m/0, n/1, start/3, start/4, split/2, padd/2]).
 
 %Work?
 
 m() -> start(123456789123456789, 345678912345648912, 20).
+n(N) ->start(123456789123456789, 345678912345648912, 10 ,N ).
+    
+
 
 split(L, N) when length(L) < N ->
     L;
@@ -153,5 +156,22 @@ start(ArgA, ArgB, _Base) ->
       Option::atom() | tuple(),
       Options::[Option].
 
-start(A,B,Base, Options) ->
-    tbi.
+start(ArgA,ArgB,_Base, Options) ->
+    
+    {A, B} = padd(sep(ArgA),sep(ArgB)),
+    %%io:format("A: ~p~n", [A]),
+    %%io:format("B: ~p~n", [B]),
+
+    C = lists:zip(A, B),
+    %%io:format("C: ~p~n", [C]),
+
+    PairsRev = lists:reverse(utils:split(C , Options)),
+    %%io:format("PairsRev: ~p~n", [PairsRev]),
+    Pairs = lists:reverse(lists:map(fun lists:reverse/1, PairsRev)),
+    %%io:format("PAirs: ~p~n", [Pairs]),
+    Ppid = self(),
+    process_flag(trap_exit,true),
+    spawn_link(fun() -> worker(Pairs, Ppid, 0) end),
+
+    %%io:format("PAIRS ~p~n", [PairsRev]),    
+    loop(Options , []).
