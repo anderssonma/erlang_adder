@@ -114,7 +114,7 @@ lqr(L, N) ->
 
 
 split(L, N) ->
-    Len = length(L), 
+    Len = length(L),
     Q = Len div N, 
     R = Len rem N,
     split(lists:reverse(L),[],Q,R).
