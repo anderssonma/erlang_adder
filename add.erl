@@ -1,12 +1,15 @@
 %% @doc Erlang mini project.
 -module(add).
--export([m/0, n/1, o/0, start/3, start/4, padd/2]).
+-export([m/0, n/0, o/0, b/0, start/3, start/4, padd/2]).
 
 %Work?
 
 m() -> start(123456789123456789, 345678912345648912, 10).
-n(N) ->start(123456789123456789, 945678912345648912, 10 ,N ).
-o() -> start(1011, 1100, 2).
+n() ->start(123456789123456789, 945678912345648912, 10,
+            [{actors, 10}, {sleep, {250, 500}}, {seq, true}]).
+o() ->start(123456789123456789, 945678912345648912, 10 ,
+            [{actors, 2}, {sleep, {500, 1000}}, {seq, false}]).
+b() -> start(1011, 1100, 2, []).
 
 
 
@@ -204,6 +207,15 @@ start(ArgA, ArgB, Base) ->
     loop([]).
 
 
+% Extracts an option if found, otherwise returns the provided default
+getOption([], _, Default) ->
+    Default;
+getOption([{Current, Value}|_], Option, _) when Current =:= Option ->
+    Value;
+getOption([_|T], Option, Default) ->
+    getOption(T, Option, Default).
+
+
 %% @doc TODO: add documentation
 -spec start(A,B,Base, Options) -> ok when 
       A::integer(),
@@ -213,10 +225,15 @@ start(ArgA, ArgB, Base) ->
       Options::[Option].
 
 start(ArgA, ArgB, Base, Options) ->
+
     
     Numbers = lists:zip(sep(ArgA), sep(ArgB)),
 
-    ProcessCount = checkPCount(length(Numbers), Options),
+    Sleep = getOption(Options, sleep, {500, 1000}),
+    Actors = getOption(Options, actors, length(Numbers)),
+    SequentialMode = getOption(Options, seq, false),
+
+    ProcessCount = checkPCount(length(Numbers), Actors),
 
     PairsRev = lists:reverse(utils:split(Numbers , ProcessCount)),
     Pairs = lists:reverse(lists:map(fun lists:reverse/1, PairsRev)),
@@ -226,13 +243,12 @@ start(ArgA, ArgB, Base, Options) ->
 
     Ppid = self(),
     process_flag(trap_exit,true),
-    SequentialMode = true,
 
     case SequentialMode of
         true ->
-            spawn_link(fun() -> worker_seq(Pairs, Ppid, 0, Base, {500, 1000}) end),
+            spawn_link(fun() -> worker_seq(Pairs, Ppid, 0, Base, Sleep) end),
             loop([]);
         false ->
-            spawn_link(fun() -> worker(Pairs, Ppid, 0, Base, {500, 1000}) end),
+            spawn_link(fun() -> worker(Pairs, Ppid, 0, Base, Sleep) end),
             loop([])
     end.
